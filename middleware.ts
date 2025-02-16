@@ -5,7 +5,10 @@ import jwt from "jsonwebtoken"
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get("token")?.value
+  if(typeof window === "undefined"){
+    return;
+  }
+  const token = window.localStorage.getItem("token")?.value
 
   if (!token) {
     return NextResponse.redirect(new URL("/", request.url))

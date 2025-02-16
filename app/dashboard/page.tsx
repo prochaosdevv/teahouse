@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { Store, Users } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
