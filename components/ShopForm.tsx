@@ -27,7 +27,7 @@ export default function ShopForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const response = await fetch("/api/shops", {
+      const response = await fetch("https://tea-delivery-app-design.vercel.app/api/shops", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

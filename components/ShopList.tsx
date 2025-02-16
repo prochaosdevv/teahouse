@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 async function getShops() {
-  const res = await fetch("/api/shops", { cache: "no-store" })
+  const res = await fetch("https://tea-delivery-app-design.vercel.app/api/shops", { cache: "no-store" })
   if (!res.ok) {
     throw new Error("Failed to fetch shops")
   }
