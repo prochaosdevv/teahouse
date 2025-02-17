@@ -11,25 +11,43 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { useToast } from "@/components/ui/use-toast"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+const shopTypes = [
+  "Grocery",
+  "Convenience Store",
+  "Supermarket",
+  "Department Store",
+  "Specialty Store",
+  "Other",
+] as const
 
 interface Shop {
   id: number
   name: string
+  type: string
   address: string
+  gstin: string
+  contactPerson: string
+  contactNumber: string
+  employees: number
+  teaCupsPerDay: number
   latitude: string
   longitude: string
 }
 
 const shopSchema = z.object({
   name: z.string().min(1, "Shop name is required"),
+  type: z.enum([...shopTypes, "Other"]),
+  otherType: z.string().optional(),
   address: z.string().min(1, "Address is required"),
-  latitude: z.string().regex(/^-?([1-8]?[1-9]|[1-9]0)\.{1}\d{1,6}$/, "Invalid latitude"),
-  longitude: z
-    .string()
-    .regex(
-      /^-?(([-+]?)([\d]{1,3})((\.)(\d+))?)|(([-+]?)([\d]{1,2})((\.)(\d+))?)|(([-+]?)([\d]{1,3})((\.)(\d+))?)$/,
-      "Invalid longitude",
-    ),
+  gstin: z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GSTIN format"),
+  contactPerson: z.string().min(1, "Contact person is required"),
+  contactNumber: z.string().regex(/^[0-9]{10}$/, "Invalid phone number"),
+  employees: z.number().int().positive("Number of employees must be positive"),
+  teaCupsPerDay: z.number().int().nonnegative("Number of tea cups must be non-negative"),
+  latitude: z.string(),
+  longitude: z.string(),
 })
 
 export default function ViewShopsPage() {
@@ -37,26 +55,46 @@ export default function ViewShopsPage() {
     {
       id: 1,
       name: "Shop 1",
+      type: "Grocery",
       address: "123 Main St",
+      gstin: "27AAPFU0939F1ZV",
+      contactPerson: "John Doe",
+      contactNumber: "1234567890",
+      employees: 5,
+      teaCupsPerDay: 50,
       latitude: "40.7128",
       longitude: "-74.0060",
     },
     {
       id: 2,
       name: "Shop 2",
+      type: "Supermarket",
       address: "456 Elm St",
+      gstin: "27AAPFU0939F1ZV",
+      contactPerson: "Jane Smith",
+      contactNumber: "9876543210",
+      employees: 20,
+      teaCupsPerDay: 200,
       latitude: "34.0522",
       longitude: "-118.2437",
     },
   ])
   const [editingShop, setEditingShop] = useState<Shop | null>(null)
   const { toast } = useToast()
+  const [otherSelected, setOtherSelected] = useState(false)
 
   const form = useForm<z.infer<typeof shopSchema>>({
     resolver: zodResolver(shopSchema),
     defaultValues: {
       name: "",
+      type: "Grocery",
+      otherType: "",
       address: "",
+      gstin: "",
+      contactPerson: "",
+      contactNumber: "",
+      employees: 0,
+      teaCupsPerDay: 0,
       latitude: "",
       longitude: "",
     },
@@ -72,12 +110,22 @@ export default function ViewShopsPage() {
 
   const handleEdit = (shop: Shop) => {
     setEditingShop(shop)
-    form.reset(shop)
+    form.reset({
+      ...shop,
+      type: shop.type as z.infer<typeof shopSchema>["type"],
+    })
+    setOtherSelected(shop.type === "Other")
   }
 
   const onSubmit = (values: z.infer<typeof shopSchema>) => {
     if (editingShop) {
-      setShops(shops.map((shop) => (shop.id === editingShop.id ? { ...shop, ...values } : shop)))
+      setShops(
+        shops.map((shop) =>
+          shop.id === editingShop.id
+            ? { ...shop, ...values, type: values.type === "Other" ? values.otherType! : values.type }
+            : shop,
+        ),
+      )
       setEditingShop(null)
       toast({
         title: "Success",
@@ -93,9 +141,13 @@ export default function ViewShopsPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
+            <TableHead>Type</TableHead>
             <TableHead>Address</TableHead>
-            <TableHead>Latitude</TableHead>
-            <TableHead>Longitude</TableHead>
+            <TableHead>GSTIN</TableHead>
+            <TableHead>Contact Person</TableHead>
+            <TableHead>Contact Number</TableHead>
+            <TableHead>Employees</TableHead>
+            <TableHead>Tea Cups/Day</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -103,9 +155,13 @@ export default function ViewShopsPage() {
           {shops.map((shop) => (
             <TableRow key={shop.id}>
               <TableCell>{shop.name}</TableCell>
+              <TableCell>{shop.type}</TableCell>
               <TableCell>{shop.address}</TableCell>
-              <TableCell>{shop.latitude}</TableCell>
-              <TableCell>{shop.longitude}</TableCell>
+              <TableCell>{shop.gstin}</TableCell>
+              <TableCell>{shop.contactPerson}</TableCell>
+              <TableCell>{shop.contactNumber}</TableCell>
+              <TableCell>{shop.employees}</TableCell>
+              <TableCell>{shop.teaCupsPerDay}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">
                   <Dialog>
@@ -135,6 +191,51 @@ export default function ViewShopsPage() {
                           />
                           <FormField
                             control={form.control}
+                            name="type"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Shop Type</FormLabel>
+                                <Select
+                                  onValueChange={(value) => {
+                                    field.onChange(value)
+                                    setOtherSelected(value === "Other")
+                                  }}
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select shop type" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {shopTypes.map((type) => (
+                                      <SelectItem key={type} value={type}>
+                                        {type}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          {otherSelected && (
+                            <FormField
+                              control={form.control}
+                              name="otherType"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Other Shop Type</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+                          <FormField
+                            control={form.control}
                             name="address"
                             render={({ field }) => (
                               <FormItem>
@@ -148,12 +249,85 @@ export default function ViewShopsPage() {
                           />
                           <FormField
                             control={form.control}
+                            name="gstin"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>GSTIN</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="contactPerson"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Contact Person</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="contactNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Contact Number</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="employees"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Number of Employees</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    {...field}
+                                    onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="teaCupsPerDay"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Number of Tea Cups consumed a day</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    {...field}
+                                    onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
                             name="latitude"
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Latitude</FormLabel>
                                 <FormControl>
-                                  <Input {...field} />
+                                  <Input {...field} readOnly />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -166,7 +340,7 @@ export default function ViewShopsPage() {
                               <FormItem>
                                 <FormLabel>Longitude</FormLabel>
                                 <FormControl>
-                                  <Input {...field} />
+                                  <Input {...field} readOnly />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>

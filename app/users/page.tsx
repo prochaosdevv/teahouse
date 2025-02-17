@@ -21,6 +21,7 @@ interface User {
 const userSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 })
 
 export default function ManageUsersPage() {
@@ -36,6 +37,7 @@ export default function ManageUsersPage() {
     defaultValues: {
       username: "",
       email: "",
+      password: "",
     },
   })
 
@@ -49,7 +51,7 @@ export default function ManageUsersPage() {
 
   const handleEdit = (user: User) => {
     setEditingUser(user)
-    form.reset(user)
+    form.reset({ ...user, password: "" })
   }
 
   const onSubmit = (values: z.infer<typeof userSchema>) => {
@@ -61,7 +63,7 @@ export default function ManageUsersPage() {
         description: "User updated successfully",
       })
     } else {
-      const newUser = { id: users.length + 1, ...values }
+      const newUser = { id: users.length + 1, username: values.username, email: values.email }
       setUsers([...users, newUser])
       toast({
         title: "Success",
@@ -106,6 +108,19 @@ export default function ManageUsersPage() {
                       <FormLabel>Email</FormLabel>
                       <FormControl>
                         <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -165,6 +180,19 @@ export default function ManageUsersPage() {
                                 <FormLabel>Email</FormLabel>
                                 <FormControl>
                                   <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="password"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>New Password (leave blank to keep current)</FormLabel>
+                                <FormControl>
+                                  <Input type="password" {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
